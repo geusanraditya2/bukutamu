@@ -1,50 +1,37 @@
 <?php
+// Aktifkan session untuk menyimpan pesan kesalahan dan data pengguna yang login.
 session_start();
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: login.php');
-    exit;
-}
 
-$username = $_POST['username'] ?? null;
-$password = $_POST['password'] ?? null;
+// Ambil input hanya jika berupa string untuk menolak kiriman berbentuk array.
+$username = $_POST['username'];
+$password = $_POST['password'];
 
-if (!is_string($username) || !is_string($password) || trim($username) === '' || $password === '') {
-    $_SESSION['login_error'] = 'Username dan password wajib diisi.';
-    header('Location: login.php');
-    exit;
-}
+include "koneksi.php";
 
-$username = trim($username);
+// LIMIT 1 membatasi hasil pencarian menjadi satu akun.
+$sql = "SELECT id_user, username, password, nama FROM `user` WHERE username = '".$username."' AND password = '".$password."'";
+$stmt = $koneksi->prepare($sql);
+$stmt->execute();
+$user = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+$koneksi->close();
 
-try {
-    require __DIR__ . '/koneksi.php';
 
-    $stmt = $koneksi->prepare('SELECT username, password FROM `user` WHERE username = ? LIMIT 1');
-    $stmt->bind_param('s', $username);
-    $stmt->execute();
-    $stmt->bind_result($storedUsername, $passwordHash);
 
-    $authenticated = $stmt->fetch()
-        && is_string($passwordHash)
-        && ($password === $passwordHash);
-    $stmt->close();
-    $koneksi->close();
-} catch (mysqli_sql_exception $exception) {
-    error_log('Login database error: ' . $exception->getMessage());
-    $_SESSION['login_error'] = 'Login belum dapat diproses. Silakan coba lagi nanti.';
-    header('Location: login.php');
-    exit;
-}
-
-if (!$authenticated) {
-    $_SESSION['login_error'] = 'Username atau password salah.';
-    header('Location: login.php');
-    exit;
-}
+if ($user){
 
 session_regenerate_id(true);
-$_SESSION['username'] = $storedUsername;
-
+// Simpan identitas pengguna untuk pemeriksaan akses dan tampilan dashboard.
+$_SESSION['id_user'] = $user['id_user'];
+$_SESSION['username'] = $user['username'];
+$_SESSION['nama'] = $user['nama'];
 header('Location: dashboard.php');
 exit;
+
+} else {
+    $_SESSION['login_error'] = "Login salah";
+    header('Location: index.php');
+exit;
+}
+

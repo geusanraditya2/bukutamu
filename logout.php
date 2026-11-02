@@ -2,21 +2,10 @@
 session_start();
 
 $_SESSION = [];
+// Ganti ID session dan hapus session lama agar pesan logout tetap bisa disimpan.
+session_regenerate_id(true);
 
-if (ini_get('session.use_cookies')) {
-    $cookieParameters = session_get_cookie_params();
-    setcookie(
-        session_name(),
-        '',
-        time() - 42000,
-        $cookieParameters['path'],
-        $cookieParameters['domain'],
-        $cookieParameters['secure'],
-        $cookieParameters['httponly']
-    );
-}
+$_SESSION['login_error'] = "Logout sukses";
 
-session_destroy();
-
-header('Location: login.php');
+header('Location: index.php');
 exit;
